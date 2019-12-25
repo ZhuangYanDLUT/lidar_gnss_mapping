@@ -1,0 +1,7 @@
+<launch>
+  <node pkg="lidar_gnss_mapping" type="lidar_gnss_mapping_gps_ins_node" name="gps_ins_node" output="screen" />
+  <node pkg="lidar_gnss_mapping" type="lidar_gnss_mapping_rtk_registration" name="register1" output="screen"/>
+  <node pkg="lidar_gnss_mapping" type="lidar_gnss_mapping_rtk_odom" name="odom1" output="screen"/>
+  <node pkg="lidar_gnss_mapping" type="lidar_gnss_mapping_rtk_mapping" name="mapping1" output="screen"/>
+  <node pkg="lidar_gnss_mapping" type="lidar_gnss_mapping_register_lidar_gps_new" name="register_lidar_gps" output="screen"/>
+</launch>
