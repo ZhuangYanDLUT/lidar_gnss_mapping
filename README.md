@@ -1,10 +1,10 @@
 # LiDAR GNSS mapping 
 ## Framework
-![image](https://github.com/ZhuangYanDLUT/lidar_gnss_mapping/tree/master/lidar_gnss_mapping/imgs/framework.png)  
+![image](https://github.com/ZhuangYanDLUT/lidar_gnss_mapping/blob/master/lidar_gnss_mapping/imgs/framework.png)  
 The overall system framework for large-scale 3D map building in partially GNSS-denied scenes, which consists of two operating modes: `LiDAR-only mode` and `LiDAR-GNSS mode`. While working in GNSS-denied scenes, LiDAR odometry runs with high frequency and outputs estimations with local registration errors, and LiDAR mapping provides more accurate pose estimations with low frequency.  
 While moving from GNSS-denied scenes to open scenes, 3D-M-Box is working in `LiDAR-GNSS mode`. The auto coordinate alignment algorithm is applied to align the coordinate system between LiDAR and GNSS by registering a group of poses obtained from LiDAR mapping and GNSS within a certain time window. Finally, GNSS-constrained LiDAR mapping outputs the pose and point clouds with high accuracy.  
 ## Sample map
-![image](https://github.com/ZhuangYanDLUT/lidar_gnss_mapping/tree/master/lidar_gnss_mapping/imgs/Campus3.png)  
+![image](https://github.com/ZhuangYanDLUT/lidar_gnss_mapping/blob/master/lidar_gnss_mapping/imgs/framework.png)  
 The picture shows that 3D-M-Box can accomplish online pose estimation and map building in GNSS-denied scenes.  
 ## Dependency  
 **ROS** (tested with kinetic)  
