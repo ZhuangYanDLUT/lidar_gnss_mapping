@@ -19,7 +19,7 @@ sudo make install
 ## How to build with catkin    
 ```
 cd ~/catkin_ws/src  
-git clone   
+git clone https://github.com/ZhuangYanDLUT/lidar_gnss_mapping.git  
 cd ~/catkin_ws  
 catkin_make  
 ```
