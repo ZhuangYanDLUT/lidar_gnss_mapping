@@ -25,7 +25,7 @@ catkin_make
 ```
 ## Running
 `roslaunch lidar_gnss_mapping lidar_gnss_mapping.launch`  
-In second terminal play sample data from test.bag  
+In second terminal play sample data from [test.bag](https://pan.baidu.com/s/1KUwSCFyufw5symvmWUorYA) access code`ri4b`  
 `rosbag play test.bag`  
 
 	
