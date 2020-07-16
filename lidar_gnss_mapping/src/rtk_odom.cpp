@@ -72,7 +72,8 @@
  float imuRollStart = 0, imuPitchStart = 0, imuYawStart = 0;     
  float imuRollLast = 0, imuPitchLast = 0, imuYawLast = 0;        
  float imuShiftFromStartX = 0, imuShiftFromStartY = 0, imuShiftFromStartZ = 0;  
- float imuVeloFromStartX = 0, imuVeloFromStartY = 0, imuVeloFromStartZ = 0;     
+ float imuVeloFromStartX = 0, imuVeloFromStartY = 0, imuVeloFromStartZ = 0;   
+ int last_publish_state = 0;  
 
 void ResetState(const nav_msgs::Odometry::ConstPtr& laserOdometry){
     //std::cout<<"--------------Reset Odom State----------------"<<std::endl;

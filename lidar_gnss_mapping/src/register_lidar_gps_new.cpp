@@ -48,7 +48,7 @@ std::deque<PointTypePose>recentOdom;
 std::deque<double>timeOdometry;									
 pcl::PointCloud<PointType>::Ptr laserCloudFullRes;
 pcl::PointCloud<PointType>::Ptr globalMapKeyFrames;
-
+pcl::PointCloud<PointType>::Ptr pubGlobalMap;
 
 ros::Publisher pubLaserCloudSurround_rtk;
 ros::Publisher pubLoamDeltaTheta;
@@ -77,6 +77,7 @@ PointType end_curretn;
 
 loamGtsam LG;
 double delta_theta = 0;
+int begin_index=3,end_index = 0;//坐标系对齐第一个index
 
 bool write_pointcloud_to_file(string str,pcl::PointCloud<PointType>::Ptr cloudIn){
 	std::ofstream of(str,std::ios::app);
@@ -101,7 +102,6 @@ pcl::PointCloud<PointType>::Ptr transformPointCloud(pcl::PointCloud<PointType>::
 
     int cloudSize = cloudIn->points.size();
     cloudOut->resize(cloudSize);
-    //std::cout<<"cloudSize   "<<cloudSize<<std::endl;
     for (int i = 0; i < cloudSize; ++i){
 
         pointFrom = &cloudIn->points[i];
@@ -125,7 +125,6 @@ pcl::PointCloud<PointType>::Ptr transformPointCloud(pcl::PointCloud<PointType>::
 }
 void laserCloudFullResHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudFullRes2){
 	timeLaserCloudFullRes = laserCloudFullRes2->header.stamp.toSec();
-	//std::cout<<"laser"<<std::endl;
 	laserCloudFullRes.reset(new pcl::PointCloud<PointType>());
 	pcl::PointCloud<PointType>::Ptr laserCloudTmp;
 	laserCloudTmp.reset(new pcl::PointCloud<PointType>());
@@ -194,48 +193,47 @@ void registerLidarGpsCallback(
 
     if(laserOdometry->update == true){
     	final_theta = 0;	
-    	theta = laserOdometry->theta;
-    	if(begin_time.size()==0 || theta!=update_theta[update_theta.size()-1]){
-    		update_theta.push_back(laserOdometry->theta);		//存储对应的角度值
-    		begin_time.push_back(cloudKeyPoses3D->points.size());
-    	}
+
+		update_theta.push_back(laserOdometry->theta);		
+		begin_time.push_back(cloudKeyPoses3D->points.size());
+
     }
     else if(final_theta == 0){
     		final_theta = laserOdometry->theta;
     		begin_time.push_back(cloudKeyPoses3D->points.size());
-    		delta_theta = final_theta - latest_theta +test_angle;
-    		theta = latest_theta;
-    		latest_theta = final_theta;
-    		auto begin_index = begin_time.size()==0? 0:end_loam_index;
-    		auto end_index = begin_time[begin_time.size()-1];
 
-    		PointType tmp_point;		
-    		for(auto i = begin_index;i<end_index;++i){
-    			odomKeyPoses6D->points[i].pitch -= delta_theta;
-    			for(auto k=0;k<timeLaser.size();++k){
-					if(fabs(timeLaser[k] - timeOdometry[i])<0.05){
-						globalMapKeyFrames.reset(new pcl::PointCloud<PointType>());
-    					*globalMapKeyFrames = *transformPointCloud(recentLidarCloud[k],&odomKeyPoses6D->points[i]);
-    					sensor_msgs::PointCloud2 cloudMsgTemp;
-			        	pcl::toROSMsg(*globalMapKeyFrames, cloudMsgTemp);
-			        	cloudMsgTemp.header.stamp = ros::Time().fromSec(timeLaser[k]);
-			       		cloudMsgTemp.header.frame_id = "/camera_init";
-			       		pubLaserCloudSurround_rtk.publish(cloudMsgTemp);
-			       		//write_pointcloud_to_file(str1,globalMapKeyFrames);
-			       		break;
+    		end_index = begin_time[begin_time.size()-1];
+    		int theta_index = 0;
+    		pubGlobalMap.reset(new pcl::PointCloud<PointType>());
+
+    		for(auto i = end_index-update_theta.size();i<end_index;++i){
+				if(odomKeyPoses6D->points[i].intensity !=1){
+					odomKeyPoses6D->points[i].pitch -= (final_theta - update_theta[theta_index]);
+					theta_index++;
+					for(auto k=0;k<timeLaser.size();++k){
+						if(fabs(timeLaser[k] - timeOdometry[i])<0.05){
+							globalMapKeyFrames.reset(new pcl::PointCloud<PointType>());
+							*globalMapKeyFrames = *transformPointCloud(recentLidarCloud[k],&odomKeyPoses6D->points[i]);
+							*pubGlobalMap += *globalMapKeyFrames;
+							break;
+						}
 					}
 				}
-    			
-    		}
+			}
+			sensor_msgs::PointCloud2 cloudMsgTemp;
+			globalMapKeyFrames.reset(new pcl::PointCloud<PointType>());
+			pcl::toROSMsg(*pubGlobalMap, cloudMsgTemp);
+			cloudMsgTemp.header.stamp = ros::Time().fromSec(timeLaser[timeLaser.size()-1]);
+			cloudMsgTemp.header.frame_id = "/camera_init";
+			pubLaserCloudSurround_rtk.publish(cloudMsgTemp);
+    		begin_time.clear();	
+			update_theta.clear();
     		count_index = end_index;
-    		std::cout<<"end currect"<<std::endl;	
-    }else if( final_theta!=0){
-    	int k = cloudKeyPoses3D->points.size()-1;
-		laser_gps_test = odomKeyPoses6D->points[k];
+	
     }
-    if(odomKeyPoses6D->points[laser_gps_test.index].intensity == 0 && final_theta!=0){
+    if(odomKeyPoses6D->points[laser_gps_test.index].intensity == 0 && final_theta!=0 && odomKeyPoses6D->points.size()>end_index+1){
     	for(auto i=0;i<timeLaser.size();++i){
-    		if(fabs(timeLaserOdometry - timeLaser[i])<0.0005){
+    		if(fabs(timeLaserOdometry - timeLaser[i])<0.05){
     			laser_index = i;
 
     			pcl::PointCloud<PointType>::Ptr pointCloudTmp = recentLidarCloud[i];
@@ -248,15 +246,12 @@ void registerLidarGpsCallback(
     			cloudMsgTemp.header.stamp = ros::Time().fromSec(timeLaser[i]);
 		        cloudMsgTemp.header.frame_id = "/camera_init";
 		        pubLaserCloudSurround_rtk.publish(cloudMsgTemp);  
-		        //write_pointcloud_to_file(str1,globalMapKeyFrames);
 		        break;
     		}
     	}
+    	globalMapKeyFrames.reset(new pcl::PointCloud<PointType>());
     }
-    for(int k = 0;k<laser_index;++k){
-		timeLaser.pop_front();
-		recentLidarCloud.pop_front();
-	}
+
 	laser_index = 0;
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
     if(laser_gps_test.index > 0 && odomKeyPoses6D->points[laser_gps_test.index].intensity == 2
@@ -437,11 +432,11 @@ void registerLidarGpsCallback(
 				thisPose.y = LG.currentOdomKeyPoses6D->points[i].y;
 				thisPose.z = LG.currentOdomKeyPoses6D->points[i].z;
 
-				optimizePose3D->push_back(thisPose);		//优化后的位姿
+				optimizePose3D->push_back(thisPose);		
 				thisPose.x = cloudKeyPoses3D->points[j].x;
 				thisPose.y = cloudKeyPoses3D->points[j].y;
 				thisPose.z = cloudKeyPoses3D->points[j].z;
-				loamPose3D->push_back(thisPose);			//loam的位姿
+				loamPose3D->push_back(thisPose);		
 				cloudKeyPoses3D->points[j].x = LG.currentOdomKeyPoses6D->points[i].x;
 				cloudKeyPoses3D->points[j].y = LG.currentOdomKeyPoses6D->points[i].y;
 				cloudKeyPoses3D->points[j].z = LG.currentOdomKeyPoses6D->points[i].z;
@@ -451,23 +446,24 @@ void registerLidarGpsCallback(
 				odomKeyPoses6D->points[j].roll = LG.currentOdomKeyPoses6D->points[i].roll;
 				odomKeyPoses6D->points[j].pitch = LG.currentOdomKeyPoses6D->points[i].pitch;
 				odomKeyPoses6D->points[j].yaw = LG.currentOdomKeyPoses6D->points[i].yaw;
-				//将修正后的点云数据发布
-				
-				for(auto k=tmp_time_index;k<timeLaser.size();++k){
-					if(fabs(timeLaser[k] - timeOdometry[j])<0.05){
-						tmp_time_index = k;
-						globalMapKeyFrames.reset(new pcl::PointCloud<PointType>());
-    					*globalMapKeyFrames = *transformPointCloud(recentLidarCloud[k],&odomKeyPoses6D->points[j]);
-    					sensor_msgs::PointCloud2 cloudMsgTemp;
-			        	pcl::toROSMsg(*globalMapKeyFrames, cloudMsgTemp);
-			        	cloudMsgTemp.header.stamp = ros::Time().fromSec(timeLaser[k]);
-			       		cloudMsgTemp.header.frame_id = "/camera_init";
-			       		pubLaserCloudSurround_rtk.publish(cloudMsgTemp);
-			       		//write_pointcloud_to_file(str1,globalMapKeyFrames);
-			       		break;
+				if(odomKeyPoses6D->points[j].intensity != 1){
+					for(auto k=0;k<timeLaser.size();++k){
+						if(fabs(timeLaser[k] - timeOdometry[j])<0.005){
+							globalMapKeyFrames.reset(new pcl::PointCloud<PointType>());
+	    					*globalMapKeyFrames = *transformPointCloud(recentLidarCloud[k],&odomKeyPoses6D->points[j]);
+	    					*pubGlobalMap += *globalMapKeyFrames;
+				       		break;
+						}
 					}
 				}
 			}
+			sensor_msgs::PointCloud2 cloudMsgTemp;
+			pcl::toROSMsg(*pubGlobalMap, cloudMsgTemp);
+			cloudMsgTemp.header.stamp = ros::Time().fromSec(timeLaser[timeLaser.size()-1]);
+			cloudMsgTemp.header.frame_id = "/camera_init";
+			pubLaserCloudSurround_rtk.publish(cloudMsgTemp);
+			globalMapKeyFrames.reset(new pcl::PointCloud<PointType>());
+			begin_index = begin_current_id+LG.currentOdomKeyPoses6D->points.size();
 			nav_msgs::Odometry odom;
 			odom.header.frame_id = "/camera_init";
 			odom.pose.pose.orientation.x = odomKeyPoses6D->points[LG.currentOdomKeyPoses6D->points.size()-1+begin_current_id].roll - roll;
@@ -516,7 +512,6 @@ int main(int argc, char**argv){
 	ros::Rate rate(10);
 	double odom_num = 0;
 	bool first_write_keyPose(true);
-	//std::cout<<"2222222222222222222"<<std::endl;
 	while(ros::ok()){
 		if(cloudKeyPoses3D->points.size()!=0){
 			sensor_msgs::PointCloud2 cloudMsgTemp;

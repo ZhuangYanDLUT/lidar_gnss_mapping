@@ -65,7 +65,7 @@ ROSVec3d firstRPY;
 bool isFirst(true);
 bool haveNoGpsData(true);
 double timeDiff(0.0);
-double sinLat, cosLat, sinLon, cosLon; //坐标轴方向
+double sinLat, cosLat, sinLon, cosLon; 
 
 ROSVec3d newestStableRpy;
 ROSPoi3d newestStablePoi;
@@ -88,8 +88,8 @@ geometry_msgs::Quaternion geoQuat;
 // }
 void GPSCallback(const lidar_gnss_mapping::gpgga_msg::ConstPtr &gpsIn) {
   gpsInTime = gpsIn->header.stamp.toSec();
-  lat = gpsIn->latitude; // Unit: degree纬度
-  lon = gpsIn->longitude;//经度
+  lat = gpsIn->latitude; // Unit: degree
+  lon = gpsIn->longitude;//
   alt = gpsIn->altitude; // Unit: metre
   status = gpsIn->GPSstatus;
   satNum = gpsIn->satelliteNum;

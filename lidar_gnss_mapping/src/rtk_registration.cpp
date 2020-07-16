@@ -50,7 +50,7 @@
 
  int imuPointerFront = 0;
  int imuPointerLast = -1;
- const int imuQueLength = 200;//imu的频率，x-sens可以达到400hz
+ const int imuQueLength = 200;
 
  float imuRollStart = 0, imuPitchStart = 0, imuYawStart = 0;
  float imuRollCur = 0, imuPitchCur = 0, imuYawCur = 0;
@@ -63,7 +63,6 @@
 
  float imuShiftFromStartXCur = 0, imuShiftFromStartYCur = 0, imuShiftFromStartZCur = 0;
  float imuVeloFromStartXCur = 0, imuVeloFromStartYCur = 0, imuVeloFromStartZCur = 0;
-//这块包括每秒内imu的时间戳，三角数据，加速度，速度，位移。
  double imuTime[imuQueLength] = {0};
  float imuRoll[imuQueLength] = {0};
  float imuPitch[imuQueLength] = {0};

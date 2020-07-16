@@ -185,7 +185,7 @@ int last_rtk_status = 4;
 bool isFirstAngle(true);
 double first_yaw,first_pitch;
 double angle_yaw,angle_pitch;
-
+int last_publish_state = 0; 
 
  void transformAssociateToMap()
  {
@@ -389,7 +389,6 @@ void ResetState() {
   std::memset(transformIncre, 0, sizeof(float) * 6);
   imuPointerFront = 0;
   imuPointerLast = -1;
-  // std::memmove(transformBefMapped, transformSum, sizeof(float) * 6);
   std::memset(transformTobeMapped, 0, sizeof(float) * 6);
   std::memset(transformBefMapped, 0, sizeof(float) * 6);
   std::memset(transformAftMapped, 0, sizeof(float) * 6);
@@ -587,8 +586,8 @@ int count = 0;
 
       if(update){
         new_index = loam_transform.size();
-        old_index = first==true?5:8;  //10:3
-        data_num = first==true? 50:20;
+        old_index = first==true?3:3;  //10:3
+        data_num = first==true? 40:20;
 
         if(update && (new_index-data_num)>old_index){
           count++;   
@@ -1286,7 +1285,7 @@ lidar_gnss_mapping::odom_and_ctrl publishDataTypeConversion(std::vector<float>tm
                continue;
              }
 
-              bool tmp(false);
+              // bool tmp(false);
 
              if(!update && ((last_status == 0 || last_status ==1)))
              {
@@ -1476,7 +1475,7 @@ lidar_gnss_mapping::odom_and_ctrl publishDataTypeConversion(std::vector<float>tm
                 data.push_back(giposi.y);
                 data.push_back(giposi.z);
                 data.push_back(1);      
-
+                last_publish_state = 1;  
                 lidar_gnss_mapping::odom_and_ctrl oc_msg1;
                 oc_msg1 = publishDataTypeConversion(data);
                 oc_msg1.rtk_num = rtk_index;
@@ -1496,6 +1495,10 @@ lidar_gnss_mapping::odom_and_ctrl publishDataTypeConversion(std::vector<float>tm
             }
             if(last_status == 1 || last_status == 0){
                 last_status = 1;
+                if(last_publish_state == 1){
+                    last_publish_state = 0;
+                    continue ;
+                }
                 std::vector<float>data;
                 for(int i = 0; i < 3; ++i){
                   data.push_back(transformAftMapped[i]);
@@ -1538,13 +1541,14 @@ lidar_gnss_mapping::odom_and_ctrl publishDataTypeConversion(std::vector<float>tm
                       for(int i = 0;i<6;++i){
                         deltaPose[i] = newloamodom[i] - lastloamodom[i];
                         lastloamodom[i] = newrtkodom[i];
-                        newrtkodom[i] = newrtkodom[i] + deltaPose[i];   //新的数据
+                        newrtkodom[i] = newrtkodom[i] + deltaPose[i];   
                       }
                       std::vector<float>data;
                       for(int i = 0; i < 6; ++i){
                         data.push_back(newloamodom[i]);
                       }
-                      data.push_back(2);      
+                      data.push_back(2);     
+                      last_publish_state = 2; 
                       lidar_gnss_mapping::odom_and_ctrl oc_msg1;
                       oc_msg1 = publishDataTypeConversion(data);
                       oc_msg1.update = update;
@@ -1564,6 +1568,7 @@ lidar_gnss_mapping::odom_and_ctrl publishDataTypeConversion(std::vector<float>tm
                       data.push_back(newloamodom[i]);
                     }
                     data.push_back(3);
+                    last_publish_state = 3;
                     lidar_gnss_mapping::odom_and_ctrl oc_msg1;
                     oc_msg1 = publishDataTypeConversion(data);
                     oc_msg1.update = update;
@@ -1597,6 +1602,7 @@ lidar_gnss_mapping::odom_and_ctrl publishDataTypeConversion(std::vector<float>tm
                   data.push_back(newloamodom[i]);
                 }
                 data.push_back(2);    
+                last_publish_state = 2;
                 lidar_gnss_mapping::odom_and_ctrl oc_msg1;
                 oc_msg1 = publishDataTypeConversion(data);
                 oc_msg1.update = update;
